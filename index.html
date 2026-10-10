@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="description" content="School Holiday List - Track your holidays easily">
+    <title>School Holiday List</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%234CAF50' width='192' height='192'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle'>📅</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📅 School Holidays</h1>
+            <button id="installBtn" class="install-btn" style="display: none;">
+                ⬇️ Install App
+            </button>
+        </header>
+
+        <!-- Notification Bar -->
+        <div id="notificationBar" class="notification-bar" style="display: none;">
+            <span id="notificationText"></span>
+        </div>
+
+        <!-- Today & Tomorrow Status -->
+        <section class="status-section">
+            <div class="status-card today">
+                <div class="status-label">Today</div>
+                <div class="status-content">
+                    <span id="todayStatus" class="status-emoji">😊</span>
+                    <div id="todayName" class="status-text">Regular Day</div>
+                </div>
+            </div>
+            <div class="status-card tomorrow">
+                <div class="status-label">Tomorrow</div>
+                <div class="status-content">
+                    <span id="tomorrowStatus" class="status-emoji">😊</span>
+                    <div id="tomorrowName" class="status-text">Regular Day</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Add Holiday Section -->
+        <section class="add-holiday-section">
+            <h2>Add Holiday</h2>
+            <div class="input-group">
+                <input type="text" id="holidayName" placeholder="Holiday name" maxlength="30">
+                <input type="date" id="holidayDate">
+                <button id="addBtn" class="btn-primary">Add</button>
+            </div>
+        </section>
+
+        <!-- Upcoming Holidays Section -->
+        <section class="holidays-section">
+            <h2>Upcoming Holidays 🎉</h2>
+            <div id="upcomingHolidaysList" class="holidays-list"></div>
+            <button id="showMoreBtn" class="btn-secondary" style="display: none;">Show More</button>
+        </section>
+
+        <!-- Past Holidays Section -->
+        <section class="holidays-section">
+            <h2>Past Holidays 📜</h2>
+            <div id="pastHolidaysList" class="holidays-list"></div>
+        </section>
+    </div>
+
+    <!-- Notification Permission Request -->
+    <div id="permissionPrompt" class="permission-prompt" style="display: none;">
+        <div class="permission-content">
+            <h3>Enable Notifications?</h3>
+            <p>Get notified when a holiday is tomorrow!</p>
+            <button id="allowNotifications" class="btn-primary">Allow</button>
+            <button id="denyNotifications" class="btn-secondary">Not Now</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
