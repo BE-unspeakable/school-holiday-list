@@ -1,4 +1,4 @@
-const STORAGE_KEY = "schoolHolidayList_v1";
+const STORAGE_KEY = "schoolHolidayList_v3";
 
 const DEFAULT_HOLIDAYS = [
   { type: "STATE HOLIDAY", holiday: "GOOD FRIDAY", from: "2026-04-03", to: "2026-04-03" },
@@ -16,27 +16,26 @@ const DEFAULT_HOLIDAYS = [
   { type: "STATE HOLIDAY", holiday: "MAHA-ASHTAMI", from: "2026-10-19", to: "2026-10-19" },
   { type: "STATE HOLIDAY", holiday: "MAHANAVAMI / AYUDHAPOOJA", from: "2026-10-20", to: "2026-10-20" },
   { type: "STATE HOLIDAY", holiday: "VIJAYADASAMI / DASSEHRA", from: "2026-10-21", to: "2026-10-21" },
-  { type: "STATE HOLIDAY", holiday: "STATE FORMATION DAY (MADHYA PRADESH / HARYANA / KARNATAKA / TAMILNADU)", from: "2026-11-01", to: "2026-11-01" },
+  { type: "STATE HOLIDAY", holiday: "STATE FORMATION DAY", from: "2026-11-01", to: "2026-11-01" },
   { type: "STATE HOLIDAY", holiday: "DIWALI", from: "2026-11-09", to: "2026-11-09" },
   { type: "STATE HOLIDAY", holiday: "DIWALI (NEW YEAR)", from: "2026-11-10", to: "2026-11-10" },
   { type: "STATE HOLIDAY", holiday: "DIWALI (BHAI DUJ)", from: "2026-11-11", to: "2026-11-11" },
-  { type: "STATE HOLIDAY", holiday: "GURU NANAK JAYANTI / KARTIK POORNIMA", from: "2026-11-24", to: "2026-11-24" },
+  { type: "STATE HOLIDAY", holiday: "GURU NANAK JAYANTI", from: "2026-11-24", to: "2026-11-24" },
   { type: "STATE HOLIDAY", holiday: "CHRISTMAS DAY", from: "2026-12-25", to: "2026-12-25" },
   { type: "STATE HOLIDAY", holiday: "NEW YEAR DAY", from: "2027-01-01", to: "2027-01-01" },
   { type: "NATIONAL HOLIDAY", holiday: "REPUBLIC DAY", from: "2027-01-26", to: "2027-01-26" },
   { type: "STATE HOLIDAY", holiday: "MAHA SHIVRATRI", from: "2027-03-06", to: "2027-03-06" },
   { type: "CITY HOLIDAY", holiday: "RAMZAN EID", from: "2027-03-10", to: "2027-03-10" },
   { type: "STATE HOLIDAY", holiday: "HOLI", from: "2027-03-22", to: "2027-03-22" },
-  { type: "STATE HOLIDAY", holiday: "HOLI / DHULANDI / PANGUNI UTHIRAM", from: "2027-03-23", to: "2027-03-23" },
+  { type: "STATE HOLIDAY", holiday: "HOLI / DHULANDI", from: "2027-03-23", to: "2027-03-23" },
   { type: "STATE HOLIDAY", holiday: "GOOD FRIDAY", from: "2027-03-26", to: "2027-03-26" }
 ];
 
-let showAllUpcoming = false;
+let currentFilter = "all";
 let deferredPrompt = null;
 
 const elements = {
-  upcomingList: document.getElementById("upcomingList"),
-  pastList: document.getElementById("pastList"),
+  tableBody: document.getElementById("tableBody"),
   notificationBar: document.getElementById("notificationBar"),
   notificationText: document.getElementById("notificationText"),
   todayEmoji: document.getElementById("todayEmoji"),
@@ -47,7 +46,8 @@ const elements = {
   holidayName: document.getElementById("holidayName"),
   holidayFromDate: document.getElementById("holidayFromDate"),
   holidayToDate: document.getElementById("holidayToDate"),
-  showMoreBtn: document.getElementById("showMoreBtn"),
+  searchInput: document.getElementById("searchInput"),
+  filterBtns: document.querySelectorAll(".filter-btn"),
   installBtn: document.getElementById("installBtn"),
   permissionModal: document.getElementById("permissionModal"),
   allowNotifyBtn: document.getElementById("allowNotifyBtn"),
@@ -60,10 +60,8 @@ function getStoredHolidays() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_HOLIDAYS));
     return [...DEFAULT_HOLIDAYS];
   }
-
   try {
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) && parsed.length ? parsed : [...DEFAULT_HOLIDAYS];
+    return JSON.parse(saved);
   } catch {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_HOLIDAYS));
     return [...DEFAULT_HOLIDAYS];
@@ -82,207 +80,229 @@ function formatDate(dateString) {
   return toDate(dateString).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function formatDay(dateString) {
-  return toDate(dateString).toLocaleDateString(undefined, { weekday: "long" });
+function isWeekend(dateString) {
+  const day = toDate(dateString).getDay();
+  return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
 }
 
-function dateKey(dateString) {
-  const d = toDate(dateString);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10);
+function getToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-function normalizeRange(item) {
+function getTomorrow() {
+  const tomorrow = new Date(getToday());
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow;
+}
+
+function getDaysDifference(fromDateStr, toDateStr) {
+  const from = toDate(fromDateStr);
+  const to = toDate(toDateStr || fromDateStr);
+  const today = getToday();
+  
+  const daysDiff = Math.round((from - today) / (1000 * 60 * 60 * 24));
+  const pastDaysDiff = Math.round((today - to) / (1000 * 60 * 60 * 24));
+  
+  return { daysDiff, pastDaysDiff };
+}
+
+function getHolidayStatus(item) {
   const from = toDate(item.from);
   const to = toDate(item.to || item.from);
-  return { ...item, from, to };
-}
-
-function getHolidayDurationInDays(item) {
-  const from = toDate(item.from);
-  const to = toDate(item.to || item.from);
-  const diff = Math.round((to - from) / (1000 * 60 * 60 * 24));
-  return diff + 1;
+  const today = getToday();
+  const tomorrow = getTomorrow();
+  
+  if (from <= today && to >= today) return "today";
+  if (from <= tomorrow && to >= tomorrow) return "tomorrow";
+  if (to < today) return "past";
+  return "upcoming";
 }
 
 function sortedHolidays(holidays) {
   return [...holidays].sort((a, b) => toDate(a.from) - toDate(b.from));
 }
 
-function getUpcomingHolidayEntries() {
-  const today = new Date();
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  return sortedHolidays(getStoredHolidays()).filter((item) => {
-    const holidayEnd = toDate(item.to || item.from);
-    return holidayEnd >= startOfToday;
-  });
+function getAllDatesInRange(fromStr, toStr) {
+  const dates = [];
+  const from = new Date(fromStr + "T00:00:00");
+  const to = new Date((toStr || fromStr) + "T00:00:00");
+  
+  for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
 }
 
-function getPastHolidayEntries() {
-  const today = new Date();
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  return sortedHolidays(getStoredHolidays())
-    .filter((item) => toDate(item.to || item.from) < startOfToday)
-    .reverse();
+function getFilteredHolidays() {
+  let holidays = getStoredHolidays();
+  
+  if (currentFilter === "upcoming") {
+    const today = getToday();
+    holidays = holidays.filter(item => toDate(item.to || item.from) >= today);
+  } else if (currentFilter === "past") {
+    const today = getToday();
+    holidays = holidays.filter(item => toDate(item.to || item.from) < today);
+  }
+  
+  const searchTerm = elements.searchInput.value.toLowerCase();
+  if (searchTerm) {
+    holidays = holidays.filter(item =>
+      item.holiday.toLowerCase().includes(searchTerm) ||
+      item.type.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  return sortedHolidays(holidays);
 }
 
-function getStatusForDate(dateString) {
+function getAllWeekends() {
   const holidays = getStoredHolidays();
-  const target = new Date(dateString + "T00:00:00");
+  const weekendRows = new Set();
+  
+  // Add all weekends to the table
+  const today = getToday();
+  const endDate = new Date(today);
+  endDate.setFullYear(endDate.getFullYear() + 1);
+  
+  for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() === 0 || d.getDay() === 6) { // Sunday or Saturday
+      const dateStr = d.toISOString().split('T')[0];
+      // Check if this date is not already in holidays
+      const isAlreadyHoliday = holidays.some(item => {
+        const from = toDate(item.from);
+        const to = toDate(item.to || item.from);
+        const checkDate = toDate(dateStr);
+        return checkDate >= from && checkDate <= to;
+      });
+      
+      if (!isAlreadyHoliday) {
+        weekendRows.add(dateStr);
+      }
+    }
+  }
+  
+  return weekendRows;
+}
 
-  const match = holidays.find((item) => {
-    const from = toDate(item.from);
-    const to = toDate(item.to || item.from);
-    const current = new Date(target);
-    return current >= from && current <= to;
-  });
-
-  return match ? { isHoliday: true, name: match.holiday } : { isHoliday: false, name: "Regular day" };
+function renderTable() {
+  const holidays = getFilteredHolidays();
+  const weekends = getAllWeekends();
+  
+  if (holidays.length === 0) {
+    elements.tableBody.innerHTML = '<tr class="no-data"><td colspan="7">No holidays found</td></tr>';
+    return;
+  }
+  
+  elements.tableBody.innerHTML = holidays.map(item => {
+    const { daysDiff, pastDaysDiff } = getDaysDifference(item.from, item.to);
+    const status = getHolidayStatus(item);
+    const duration = Math.round((toDate(item.to || item.from) - toDate(item.from)) / (1000 * 60 * 60 * 24)) + 1;
+    const isWeekendHoliday = isWeekend(item.from);
+    
+    let statusBadge = '';
+    let daysDisplay = '';
+    let rowClass = '';
+    
+    if (status === "today") {
+      statusBadge = '<div class="status-badge status-today">🎉 Today</div>';
+      daysDisplay = '<div class="days-counter soon">TODAY</div>';
+    } else if (status === "tomorrow") {
+      statusBadge = '<div class="status-badge status-upcoming">⭐ Tomorrow</div>';
+      daysDisplay = '<div class="days-counter soon">1 day</div>';
+    } else if (status === "upcoming") {
+      statusBadge = '<div class="status-badge status-upcoming">📌 Upcoming</div>';
+      daysDisplay = `<div class="days-counter upcoming">${daysDiff} days</div>`;
+    } else {
+      statusBadge = '<div class="status-badge status-past">📜 Past</div>';
+      daysDisplay = `<div class="days-counter past">${pastDaysDiff} days ago</div>`;
+    }
+    
+    if (isWeekendHoliday) {
+      rowClass = ' weekend-row';
+    }
+    
+    let typeBadge = `<div class="holiday-type">${item.type}</div>`;
+    if (item.type.includes("CITY")) {
+      typeBadge = `<div class="holiday-type city">${item.type}</div>`;
+    } else if (item.type.includes("NATIONAL")) {
+      typeBadge = `<div class="holiday-type national">${item.type}</div>`;
+    } else if (item.type.includes("CUSTOM")) {
+      typeBadge = `<div class="holiday-type custom">${item.type}</div>`;
+    }
+    
+    return `
+      <tr${rowClass}>
+        <td><div class="holiday-name">${item.holiday}${isWeekendHoliday ? ' 🌟' : ''}</div></td>
+        <td>${typeBadge}</td>
+        <td>${formatDate(item.from)}</td>
+        <td>${formatDate(item.to || item.from)}</td>
+        <td>${duration} ${duration === 1 ? 'day' : 'days'}</td>
+        <td>${statusBadge}</td>
+        <td>${daysDisplay}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderStatus() {
-  const today = new Date();
-  const tomorrow = new Date();
-  tomorrow.setDate(today.getDate() + 1);
-
-  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString().slice(0, 10);
-  const tomorrowKey = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).toISOString().slice(0, 10);
-
-  const todayResult = getStatusForDate(todayKey);
-  const tomorrowResult = getStatusForDate(tomorrowKey);
-
-  elements.todayEmoji.textContent = todayResult.isHoliday ? "😊" : "🙂";
-  elements.todayStatusText.textContent = todayResult.isHoliday ? `Holiday: ${todayResult.name}` : "Regular day";
-
-  elements.tomorrowEmoji.textContent = tomorrowResult.isHoliday ? "😊" : "🙂";
-  elements.tomorrowStatusText.textContent = tomorrowResult.isHoliday ? `Holiday: ${tomorrowResult.name}` : "Regular day";
-}
-
-function renderHolidayList() {
-  const upcomingItems = getUpcomingHolidayEntries();
-  const pastItems = getPastHolidayEntries();
-
-  if (upcomingItems.length === 0) {
-    elements.upcomingList.innerHTML = '<div class="empty-state">No upcoming holidays added.</div>';
-  } else {
-    const visibleItems = showAllUpcoming ? upcomingItems : upcomingItems.slice(0, 10);
-
-    elements.upcomingList.innerHTML = visibleItems.map((item) => {
-      const duration = getHolidayDurationInDays(item);
-      const fromDate = formatDate(item.from);
-      const toDate = formatDate(item.to || item.from);
-      const fromDay = formatDay(item.from);
-      const toDay = formatDay(item.to || item.from);
-      const displayText = duration > 1 ? `${duration} days` : `${duration} day`;
-
-      const todayDate = new Date();
-      const startOfToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
-      const endOfToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() + 1);
-      const startOfTomorrow = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() + 1);
-      const endOfTomorrow = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() + 2);
-      const from = toDate(item.from);
-      const to = toDate(item.to || item.from);
-      let badge = "Upcoming";
-
-      if (from <= endOfToday && to >= startOfToday) badge = "Today";
-      else if (from <= endOfTomorrow && to >= startOfTomorrow) badge = "Tomorrow";
-
-      return `
-        <div class="holiday-item holiday-row">
-          <div class="holiday-header-row">
-            <div class="holiday-name-block">
-              <span class="holiday-emoji">${badge === "Today" ? "😊" : badge === "Tomorrow" ? "🎉" : "📌"}</span>
-              <div>
-                <div class="holiday-name">${item.holiday}</div>
-                <div class="holiday-meta">${item.type}</div>
-              </div>
-            </div>
-            <div class="holiday-badge">${badge}</div>
-          </div>
-
-          <div class="holiday-date-grid">
-            <div>
-              <span class="label-small">From</span>
-              <div class="date-box"><strong>${fromDate}</strong><small>${fromDay}</small></div>
-            </div>
-            <div>
-              <span class="label-small">To</span>
-              <div class="date-box"><strong>${toDate}</strong><small>${toDay}</small></div>
-            </div>
-            <div>
-              <span class="label-small">Duration</span>
-              <div class="date-box duration-box"><strong>${displayText}</strong></div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    elements.showMoreBtn.classList.toggle("hidden", upcomingItems.length <= 10 || showAllUpcoming);
-  }
-
-  if (pastItems.length === 0) {
-    elements.pastList.innerHTML = '<div class="empty-state">No past holidays yet.</div>';
-  } else {
-    elements.pastList.innerHTML = pastItems.map((item) => {
-      const duration = getHolidayDurationInDays(item);
-      const fromDate = formatDate(item.from);
-      const toDate = formatDate(item.to || item.from);
-      const displayText = duration > 1 ? `${duration} days` : `${duration} day`;
-
-      return `
-        <div class="holiday-item holiday-row past-row">
-          <div class="holiday-header-row">
-            <div class="holiday-name-block">
-              <span class="holiday-emoji">🗓️</span>
-              <div>
-                <div class="holiday-name">${item.holiday}</div>
-                <div class="holiday-meta">${item.type}</div>
-              </div>
-            </div>
-            <div class="holiday-badge past-badge">Past</div>
-          </div>
-
-          <div class="holiday-date-grid">
-            <div>
-              <span class="label-small">From</span>
-              <div class="date-box"><strong>${fromDate}</strong></div>
-            </div>
-            <div>
-              <span class="label-small">To</span>
-              <div class="date-box"><strong>${toDate}</strong></div>
-            </div>
-            <div>
-              <span class="label-small">Duration</span>
-              <div class="date-box duration-box"><strong>${displayText}</strong></div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-}
-
-function showHolidayTomorrowNotification() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowKey = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).toISOString().slice(0, 10);
-
-  const match = getStoredHolidays().find((item) => {
-    const from = item.from;
-    const to = item.to || item.from;
-    return tomorrowKey >= from && tomorrowKey <= to;
+  const today = getToday();
+  const tomorrow = getTomorrow();
+  const holidays = getStoredHolidays();
+  
+  const todayHoliday = holidays.find(item => {
+    const from = toDate(item.from);
+    const to = toDate(item.to || item.from);
+    return from <= today && to >= today;
   });
+  
+  const tomorrowHoliday = holidays.find(item => {
+    const from = toDate(item.from);
+    const to = toDate(item.to || item.from);
+    return from <= tomorrow && to >= tomorrow;
+  });
+  
+  const todayIsWeekend = today.getDay() === 0 || today.getDay() === 6;
+  const tomorrowIsWeekend = tomorrow.getDay() === 0 || tomorrow.getDay() === 6;
+  
+  let todayText = "Regular day";
+  if (todayHoliday) todayText = `Holiday: ${todayHoliday.holiday}`;
+  else if (todayIsWeekend) todayText = "Weekend ✨";
+  
+  let tomorrowText = "Regular day";
+  if (tomorrowHoliday) tomorrowText = `Holiday: ${tomorrowHoliday.holiday}`;
+  else if (tomorrowIsWeekend) tomorrowText = "Weekend ✨";
+  
+  elements.todayEmoji.textContent = (todayHoliday || todayIsWeekend) ? "😊" : "🙂";
+  elements.todayStatusText.textContent = todayText;
+  
+  elements.tomorrowEmoji.textContent = (tomorrowHoliday || tomorrowIsWeekend) ? "😊" : "🙂";
+  elements.tomorrowStatusText.textContent = tomorrowText;
+}
 
+function showTomorrowNotification() {
+  const tomorrow = getTomorrow();
+  const holidays = getStoredHolidays();
+  const tomorrowIsWeekend = tomorrow.getDay() === 0 || tomorrow.getDay() === 6;
+  
+  const match = holidays.find(item => {
+    const from = toDate(item.from);
+    const to = toDate(item.to || item.from);
+    return from <= tomorrow && to >= tomorrow;
+  });
+  
   if (match) {
     const text = `Tomorrow is a holiday: ${match.holiday}! 😄`;
     elements.notificationText.textContent = text;
     elements.notificationBar.classList.remove("hidden");
-
+    
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("Holiday Tomorrow", { body: text });
     }
+  } else if (tomorrowIsWeekend) {
+    const text = `Tomorrow is a weekend! 🌟 Enjoy your break!`;
+    elements.notificationText.textContent = text;
+    elements.notificationBar.classList.remove("hidden");
   } else {
     elements.notificationBar.classList.add("hidden");
   }
@@ -300,40 +320,58 @@ function addHoliday() {
   const holiday = elements.holidayName.value.trim();
   const from = elements.holidayFromDate.value;
   const to = elements.holidayToDate.value || from;
-
+  
   if (!holiday || !from) {
-    alert("Please add a holiday name and start date.");
+    alert("Please enter a holiday name and start date.");
     return;
   }
-
+  
   if (to < from) {
-    alert("The end date cannot be before the start date.");
+    alert("End date cannot be before start date.");
     return;
   }
-
+  
   const holidays = getStoredHolidays();
-  const duplicate = holidays.some((item) => item.holiday.toLowerCase() === holiday.toLowerCase() && item.from === from && item.to === to);
-
-  if (duplicate) {
+  const exists = holidays.some(item =>
+    item.holiday.toLowerCase() === holiday.toLowerCase() &&
+    item.from === from &&
+    item.to === to
+  );
+  
+  if (exists) {
     alert("This holiday already exists.");
     return;
   }
-
-  const newHoliday = { type, holiday, from, to };
-  const updated = sortedHolidays([...holidays, newHoliday]);
-  saveHolidays(updated);
-
+  
+  holidays.push({ type, holiday, from, to });
+  saveHolidays(sortedHolidays(holidays));
+  
   elements.holidayName.value = "";
   elements.holidayFromDate.value = "";
   elements.holidayToDate.value = "";
-  showAllUpcoming = false;
+  
   renderAll();
 }
 
 function renderAll() {
   renderStatus();
-  renderHolidayList();
-  showHolidayTomorrowNotification();
+  renderTable();
+  showTomorrowNotification();
+}
+
+function setupFilterButtons() {
+  elements.filterBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      elements.filterBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.dataset.filter;
+      renderTable();
+    });
+  });
+}
+
+function setupSearch() {
+  elements.searchInput.addEventListener("input", renderTable);
 }
 
 function setupInstallPrompt() {
@@ -342,12 +380,11 @@ function setupInstallPrompt() {
     deferredPrompt = event;
     elements.installBtn.classList.remove("hidden");
   });
-
+  
   elements.installBtn.addEventListener("click", async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    const choice = await deferredPrompt.userChoice;
-    console.log(choice.outcome);
+    await deferredPrompt.userChoice;
     deferredPrompt = null;
     elements.installBtn.classList.add("hidden");
   });
@@ -355,31 +392,23 @@ function setupInstallPrompt() {
 
 function setupNotifications() {
   elements.allowNotifyBtn.addEventListener("click", async () => {
-    if (!("Notification" in window)) {
-      elements.permissionModal.classList.add("hidden");
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      elements.notificationBar.classList.remove("hidden");
+    if ("Notification" in window) {
+      await Notification.requestPermission();
     }
     elements.permissionModal.classList.add("hidden");
   });
-
+  
   elements.denyNotifyBtn.addEventListener("click", () => {
     elements.permissionModal.classList.add("hidden");
   });
 }
 
 elements.addHolidayBtn.addEventListener("click", addHoliday);
-elements.showMoreBtn.addEventListener("click", () => {
-  showAllUpcoming = true;
-  renderHolidayList();
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   renderAll();
+  setupFilterButtons();
+  setupSearch();
   requestNotificationPermission();
   setupInstallPrompt();
   setupNotifications();
