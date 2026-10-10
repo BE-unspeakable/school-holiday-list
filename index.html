@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#4CAF50">
+    <meta name="theme-color" content="#d68d54">
     <meta name="description" content="School Holiday List - Track your holidays easily">
     <title>School Holiday List</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%234CAF50' width='192' height='192'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle'>📅</text></svg>">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23d68d54' width='192' height='192'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle'>📅</text></svg>">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-shell">
         <header class="topbar">
-            <div>
+            <div class="header-content">
                 <p class="eyebrow">School Planner</p>
                 <h1>📅 Holiday List</h1>
             </div>
@@ -46,25 +46,48 @@
             <h2>Add New Holiday</h2>
             <div class="add-form">
                 <input id="holidayName" type="text" placeholder="Holiday name" maxlength="50" />
-                <input id="holidayFromDate" type="date" placeholder="From" />
-                <input id="holidayToDate" type="date" placeholder="To" />
-                <button id="addHolidayBtn" class="primary-btn">Add</button>
+                <input id="holidayFromDate" type="date" />
+                <input id="holidayToDate" type="date" />
+                <button id="addHolidayBtn" class="primary-btn">Add Holiday</button>
             </div>
         </section>
 
         <section class="card">
             <div class="section-header">
-                <h2>🎉 Upcoming Holidays</h2>
+                <h2>🎉 Holiday List</h2>
             </div>
-            <div id="upcomingList" class="holiday-list"></div>
-            <button id="showMoreBtn" class="secondary-btn hidden">Show more</button>
-        </section>
 
-        <section class="card">
-            <div class="section-header">
-                <h2>📜 Past Holidays</h2>
+            <div class="controls-row">
+                <div class="search-box">
+                    <input id="searchInput" type="text" placeholder="🔍 Search holidays..." />
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+                    <button class="filter-btn" data-filter="past">Past</button>
+                </div>
             </div>
-            <div id="pastList" class="holiday-list"></div>
+
+            <div class="table-wrapper">
+                <table id="holidayTable" class="holiday-table">
+                    <thead>
+                        <tr>
+                            <th>Holiday Name</th>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Days</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr class="no-data">
+                            <td colspan="7">No holidays found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 
