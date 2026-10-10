@@ -11,69 +11,71 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <h1>📅 School Holidays</h1>
-            <button id="installBtn" class="install-btn" style="display: none;">
-                ⬇️ Install App
-            </button>
+    <div class="app-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">School Planner</p>
+                <h1>📅 Holiday List</h1>
+            </div>
+            <button id="installBtn" class="install-btn hidden">⬇️ Install App</button>
         </header>
 
-        <!-- Notification Bar -->
-        <div id="notificationBar" class="notification-bar" style="display: none;">
-            <span id="notificationText"></span>
+        <div id="notificationBar" class="notification-bar hidden">
+            <span id="notificationText">Holiday tomorrow!</span>
         </div>
 
-        <!-- Today & Tomorrow Status -->
-        <section class="status-section">
-            <div class="status-card today">
-                <div class="status-label">Today</div>
-                <div class="status-content">
-                    <span id="todayStatus" class="status-emoji">😊</span>
-                    <div id="todayName" class="status-text">Regular Day</div>
+        <section class="status-grid">
+            <article class="status-card">
+                <div class="label-row">
+                    <span class="label">Today</span>
+                    <span id="todayEmoji" class="emoji-badge">🙂</span>
                 </div>
-            </div>
-            <div class="status-card tomorrow">
-                <div class="status-label">Tomorrow</div>
-                <div class="status-content">
-                    <span id="tomorrowStatus" class="status-emoji">😊</span>
-                    <div id="tomorrowName" class="status-text">Regular Day</div>
+                <p id="todayStatusText" class="status-text">Regular day</p>
+            </article>
+
+            <article class="status-card">
+                <div class="label-row">
+                    <span class="label">Tomorrow</span>
+                    <span id="tomorrowEmoji" class="emoji-badge">🙂</span>
                 </div>
+                <p id="tomorrowStatusText" class="status-text">Regular day</p>
+            </article>
+        </section>
+
+        <section class="card">
+            <h2>Add New Holiday</h2>
+            <div class="add-form">
+                <input id="holidayName" type="text" placeholder="Holiday name" maxlength="50" />
+                <input id="holidayFromDate" type="date" placeholder="From" />
+                <input id="holidayToDate" type="date" placeholder="To" />
+                <button id="addHolidayBtn" class="primary-btn">Add</button>
             </div>
         </section>
 
-        <!-- Add Holiday Section -->
-        <section class="add-holiday-section">
-            <h2>Add Holiday</h2>
-            <div class="input-group">
-                <input type="text" id="holidayName" placeholder="Holiday name" maxlength="30">
-                <input type="date" id="holidayDate">
-                <button id="addBtn" class="btn-primary">Add</button>
+        <section class="card">
+            <div class="section-header">
+                <h2>🎉 Upcoming Holidays</h2>
             </div>
+            <div id="upcomingList" class="holiday-list"></div>
+            <button id="showMoreBtn" class="secondary-btn hidden">Show more</button>
         </section>
 
-        <!-- Upcoming Holidays Section -->
-        <section class="holidays-section">
-            <h2>Upcoming Holidays 🎉</h2>
-            <div id="upcomingHolidaysList" class="holidays-list"></div>
-            <button id="showMoreBtn" class="btn-secondary" style="display: none;">Show More</button>
-        </section>
-
-        <!-- Past Holidays Section -->
-        <section class="holidays-section">
-            <h2>Past Holidays 📜</h2>
-            <div id="pastHolidaysList" class="holidays-list"></div>
+        <section class="card">
+            <div class="section-header">
+                <h2>📜 Past Holidays</h2>
+            </div>
+            <div id="pastList" class="holiday-list"></div>
         </section>
     </div>
 
-    <!-- Notification Permission Request -->
-    <div id="permissionPrompt" class="permission-prompt" style="display: none;">
-        <div class="permission-content">
-            <h3>Enable Notifications?</h3>
-            <p>Get notified when a holiday is tomorrow!</p>
-            <button id="allowNotifications" class="btn-primary">Allow</button>
-            <button id="denyNotifications" class="btn-secondary">Not Now</button>
+    <div id="permissionModal" class="modal hidden">
+        <div class="modal-box">
+            <h3>Enable Holiday Notifications?</h3>
+            <p>Get a reminder when a holiday is coming up tomorrow.</p>
+            <div class="modal-actions">
+                <button id="allowNotifyBtn" class="primary-btn">Allow</button>
+                <button id="denyNotifyBtn" class="secondary-btn">Not now</button>
+            </div>
         </div>
     </div>
 
