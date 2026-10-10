@@ -31,7 +31,7 @@ const DEFAULT_HOLIDAYS = [
   { type: "STATE HOLIDAY", holiday: "GOOD FRIDAY", from: "2027-03-26", to: "2027-03-26" }
 ];
 
-let currentFilter = "all";
+let currentFilter = "upcoming";
 let deferredPrompt = null;
 
 const elements = {
@@ -82,7 +82,7 @@ function formatDate(dateString) {
 
 function isWeekend(dateString) {
   const day = toDate(dateString).getDay();
-  return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
+  return day === 0 || day === 6;
 }
 
 function getToday() {
@@ -100,10 +100,10 @@ function getDaysDifference(fromDateStr, toDateStr) {
   const from = toDate(fromDateStr);
   const to = toDate(toDateStr || fromDateStr);
   const today = getToday();
-  
+
   const daysDiff = Math.round((from - today) / (1000 * 60 * 60 * 24));
   const pastDaysDiff = Math.round((today - to) / (1000 * 60 * 60 * 24));
-  
+
   return { daysDiff, pastDaysDiff };
 }
 
@@ -112,7 +112,7 @@ function getHolidayStatus(item) {
   const to = toDate(item.to || item.from);
   const today = getToday();
   const tomorrow = getTomorrow();
-  
+
   if (from <= today && to >= today) return "today";
   if (from <= tomorrow && to >= tomorrow) return "tomorrow";
   if (to < today) return "past";
@@ -123,20 +123,9 @@ function sortedHolidays(holidays) {
   return [...holidays].sort((a, b) => toDate(a.from) - toDate(b.from));
 }
 
-function getAllDatesInRange(fromStr, toStr) {
-  const dates = [];
-  const from = new Date(fromStr + "T00:00:00");
-  const to = new Date((toStr || fromStr) + "T00:00:00");
-  
-  for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toISOString().split('T')[0]);
-  }
-  return dates;
-}
-
 function getFilteredHolidays() {
   let holidays = getStoredHolidays();
-  
+
   if (currentFilter === "upcoming") {
     const today = getToday();
     holidays = holidays.filter(item => toDate(item.to || item.from) >= today);
@@ -144,7 +133,7 @@ function getFilteredHolidays() {
     const today = getToday();
     holidays = holidays.filter(item => toDate(item.to || item.from) < today);
   }
-  
+
   const searchTerm = elements.searchInput.value.toLowerCase();
   if (searchTerm) {
     holidays = holidays.filter(item =>
@@ -152,76 +141,46 @@ function getFilteredHolidays() {
       item.type.toLowerCase().includes(searchTerm)
     );
   }
-  
-  return sortedHolidays(holidays);
-}
 
-function getAllWeekends() {
-  const holidays = getStoredHolidays();
-  const weekendRows = new Set();
-  
-  // Add all weekends to the table
-  const today = getToday();
-  const endDate = new Date(today);
-  endDate.setFullYear(endDate.getFullYear() + 1);
-  
-  for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (d.getDay() === 0 || d.getDay() === 6) { // Sunday or Saturday
-      const dateStr = d.toISOString().split('T')[0];
-      // Check if this date is not already in holidays
-      const isAlreadyHoliday = holidays.some(item => {
-        const from = toDate(item.from);
-        const to = toDate(item.to || item.from);
-        const checkDate = toDate(dateStr);
-        return checkDate >= from && checkDate <= to;
-      });
-      
-      if (!isAlreadyHoliday) {
-        weekendRows.add(dateStr);
-      }
-    }
-  }
-  
-  return weekendRows;
+  return sortedHolidays(holidays);
 }
 
 function renderTable() {
   const holidays = getFilteredHolidays();
-  const weekends = getAllWeekends();
-  
+
   if (holidays.length === 0) {
     elements.tableBody.innerHTML = '<tr class="no-data"><td colspan="7">No holidays found</td></tr>';
     return;
   }
-  
+
   elements.tableBody.innerHTML = holidays.map(item => {
     const { daysDiff, pastDaysDiff } = getDaysDifference(item.from, item.to);
     const status = getHolidayStatus(item);
     const duration = Math.round((toDate(item.to || item.from) - toDate(item.from)) / (1000 * 60 * 60 * 24)) + 1;
     const isWeekendHoliday = isWeekend(item.from);
-    
+
     let statusBadge = '';
     let daysDisplay = '';
     let rowClass = '';
-    
+
     if (status === "today") {
       statusBadge = '<div class="status-badge status-today">🎉 Today</div>';
-      daysDisplay = '<div class="days-counter soon">TODAY</div>';
+      daysDisplay = '<div class="days-counter soon">Today</div>';
     } else if (status === "tomorrow") {
       statusBadge = '<div class="status-badge status-upcoming">⭐ Tomorrow</div>';
       daysDisplay = '<div class="days-counter soon">1 day</div>';
     } else if (status === "upcoming") {
-      statusBadge = '<div class="status-badge status-upcoming">📌 Upcoming</div>';
+      statusBadge = `<div class="status-badge status-upcoming">📌 In ${daysDiff} days</div>`;
       daysDisplay = `<div class="days-counter upcoming">${daysDiff} days</div>`;
     } else {
       statusBadge = '<div class="status-badge status-past">📜 Past</div>';
       daysDisplay = `<div class="days-counter past">${pastDaysDiff} days ago</div>`;
     }
-    
+
     if (isWeekendHoliday) {
       rowClass = ' weekend-row';
     }
-    
+
     let typeBadge = `<div class="holiday-type">${item.type}</div>`;
     if (item.type.includes("CITY")) {
       typeBadge = `<div class="holiday-type city">${item.type}</div>`;
@@ -230,7 +189,7 @@ function renderTable() {
     } else if (item.type.includes("CUSTOM")) {
       typeBadge = `<div class="holiday-type custom">${item.type}</div>`;
     }
-    
+
     return `
       <tr${rowClass}>
         <td><div class="holiday-name">${item.holiday}${isWeekendHoliday ? ' 🌟' : ''}</div></td>
@@ -249,33 +208,33 @@ function renderStatus() {
   const today = getToday();
   const tomorrow = getTomorrow();
   const holidays = getStoredHolidays();
-  
+
   const todayHoliday = holidays.find(item => {
     const from = toDate(item.from);
     const to = toDate(item.to || item.from);
     return from <= today && to >= today;
   });
-  
+
   const tomorrowHoliday = holidays.find(item => {
     const from = toDate(item.from);
     const to = toDate(item.to || item.from);
     return from <= tomorrow && to >= tomorrow;
   });
-  
+
   const todayIsWeekend = today.getDay() === 0 || today.getDay() === 6;
   const tomorrowIsWeekend = tomorrow.getDay() === 0 || tomorrow.getDay() === 6;
-  
+
   let todayText = "Regular day";
   if (todayHoliday) todayText = `Holiday: ${todayHoliday.holiday}`;
   else if (todayIsWeekend) todayText = "Weekend ✨";
-  
+
   let tomorrowText = "Regular day";
   if (tomorrowHoliday) tomorrowText = `Holiday: ${tomorrowHoliday.holiday}`;
   else if (tomorrowIsWeekend) tomorrowText = "Weekend ✨";
-  
+
   elements.todayEmoji.textContent = (todayHoliday || todayIsWeekend) ? "😊" : "🙂";
   elements.todayStatusText.textContent = todayText;
-  
+
   elements.tomorrowEmoji.textContent = (tomorrowHoliday || tomorrowIsWeekend) ? "😊" : "🙂";
   elements.tomorrowStatusText.textContent = tomorrowText;
 }
@@ -284,18 +243,18 @@ function showTomorrowNotification() {
   const tomorrow = getTomorrow();
   const holidays = getStoredHolidays();
   const tomorrowIsWeekend = tomorrow.getDay() === 0 || tomorrow.getDay() === 6;
-  
+
   const match = holidays.find(item => {
     const from = toDate(item.from);
     const to = toDate(item.to || item.from);
     return from <= tomorrow && to >= tomorrow;
   });
-  
+
   if (match) {
     const text = `Tomorrow is a holiday: ${match.holiday}! 😄`;
     elements.notificationText.textContent = text;
     elements.notificationBar.classList.remove("hidden");
-    
+
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("Holiday Tomorrow", { body: text });
     }
@@ -320,36 +279,36 @@ function addHoliday() {
   const holiday = elements.holidayName.value.trim();
   const from = elements.holidayFromDate.value;
   const to = elements.holidayToDate.value || from;
-  
+
   if (!holiday || !from) {
     alert("Please enter a holiday name and start date.");
     return;
   }
-  
+
   if (to < from) {
     alert("End date cannot be before start date.");
     return;
   }
-  
+
   const holidays = getStoredHolidays();
   const exists = holidays.some(item =>
     item.holiday.toLowerCase() === holiday.toLowerCase() &&
     item.from === from &&
     item.to === to
   );
-  
+
   if (exists) {
     alert("This holiday already exists.");
     return;
   }
-  
+
   holidays.push({ type, holiday, from, to });
   saveHolidays(sortedHolidays(holidays));
-  
+
   elements.holidayName.value = "";
   elements.holidayFromDate.value = "";
   elements.holidayToDate.value = "";
-  
+
   renderAll();
 }
 
@@ -380,7 +339,7 @@ function setupInstallPrompt() {
     deferredPrompt = event;
     elements.installBtn.classList.remove("hidden");
   });
-  
+
   elements.installBtn.addEventListener("click", async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -397,15 +356,25 @@ function setupNotifications() {
     }
     elements.permissionModal.classList.add("hidden");
   });
-  
+
   elements.denyNotifyBtn.addEventListener("click", () => {
     elements.permissionModal.classList.add("hidden");
   });
 }
 
-elements.addHolidayBtn.addEventListener("click", addHoliday);
+function setDefaultFilter() {
+  elements.filterBtns.forEach(btn => {
+    if (btn.dataset.filter === "upcoming") {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+  currentFilter = "upcoming";
+}
 
 document.addEventListener("DOMContentLoaded", () => {
+  setDefaultFilter();
   renderAll();
   setupFilterButtons();
   setupSearch();
@@ -413,3 +382,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupInstallPrompt();
   setupNotifications();
 });
+
+elements.addHolidayBtn.addEventListener("click", addHoliday);
