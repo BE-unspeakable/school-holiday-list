@@ -32,6 +32,7 @@ const DEFAULT_HOLIDAYS = [
 ];
 
 let currentFilter = "upcoming";
+let visibleHolidayCount = 10;
 let deferredPrompt = null;
 
 const elements = {
@@ -51,7 +52,8 @@ const elements = {
   installBtn: document.getElementById("installBtn"),
   permissionModal: document.getElementById("permissionModal"),
   allowNotifyBtn: document.getElementById("allowNotifyBtn"),
-  denyNotifyBtn: document.getElementById("denyNotifyBtn")
+  denyNotifyBtn: document.getElementById("denyNotifyBtn"),
+  showMoreBtn: document.getElementById("showMoreBtn")
 };
 
 function getStoredHolidays() {
@@ -150,10 +152,12 @@ function renderTable() {
 
   if (holidays.length === 0) {
     elements.tableBody.innerHTML = '<tr class="no-data"><td colspan="7">No holidays found</td></tr>';
+    elements.showMoreBtn.classList.add("hidden");
     return;
   }
 
-  elements.tableBody.innerHTML = holidays.map(item => {
+  const visibleHolidays = holidays.slice(0, visibleHolidayCount);
+  elements.tableBody.innerHTML = visibleHolidays.map(item => {
     const { daysDiff, pastDaysDiff } = getDaysDifference(item.from, item.to);
     const status = getHolidayStatus(item);
     const duration = Math.round((toDate(item.to || item.from) - toDate(item.from)) / (1000 * 60 * 60 * 24)) + 1;
@@ -202,6 +206,13 @@ function renderTable() {
       </tr>
     `;
   }).join("");
+
+  if (holidays.length > visibleHolidayCount) {
+    elements.showMoreBtn.classList.remove("hidden");
+    elements.showMoreBtn.textContent = "Show more";
+  } else {
+    elements.showMoreBtn.classList.add("hidden");
+  }
 }
 
 function renderStatus() {
@@ -324,13 +335,17 @@ function setupFilterButtons() {
       elements.filterBtns.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       currentFilter = btn.dataset.filter;
+      visibleHolidayCount = 10;
       renderTable();
     });
   });
 }
 
 function setupSearch() {
-  elements.searchInput.addEventListener("input", renderTable);
+  elements.searchInput.addEventListener("input", () => {
+    visibleHolidayCount = 10;
+    renderTable();
+  });
 }
 
 function setupInstallPrompt() {
@@ -362,6 +377,14 @@ function setupNotifications() {
   });
 }
 
+function setupShowMoreButton() {
+  elements.showMoreBtn.addEventListener("click", () => {
+    const holidays = getFilteredHolidays();
+    visibleHolidayCount = holidays.length;
+    renderTable();
+  });
+}
+
 function setDefaultFilter() {
   elements.filterBtns.forEach(btn => {
     if (btn.dataset.filter === "upcoming") {
@@ -371,6 +394,7 @@ function setDefaultFilter() {
     }
   });
   currentFilter = "upcoming";
+  visibleHolidayCount = 10;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -381,6 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
   requestNotificationPermission();
   setupInstallPrompt();
   setupNotifications();
+  setupShowMoreButton();
 });
 
 elements.addHolidayBtn.addEventListener("click", addHoliday);
