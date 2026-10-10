@@ -35,10 +35,13 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .header-content {
   flex: 1;
+  min-width: 250px;
 }
 
 .eyebrow {
@@ -54,24 +57,36 @@ body {
   font-weight: 700;
 }
 
-.install-btn {
+.header-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.install-btn,
+.notification-permission-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 2px solid white;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
-.install-btn:hover {
+.install-btn:hover,
+.notification-permission-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.install-btn.hidden {
+.install-btn.hidden,
+.notification-permission-btn.hidden {
   display: none;
 }
 
@@ -539,11 +554,16 @@ body {
   .topbar {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: 15px;
   }
 
   .topbar h1 {
     font-size: 28px;
+  }
+
+  .header-buttons {
+    width: 100%;
+    justify-content: center;
   }
 
   .controls-row {
